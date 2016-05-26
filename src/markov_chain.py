@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 import random
@@ -15,64 +15,60 @@ m = MeCab.Tagger("-Owakati")
 graph = graph()
 make_num = 0
 
-raw_sentences = []
+
+def set_sentences(txts):
+	'''
+	txts から文章を読み込む．
+	'''
+	sentences = []
+	if txts is not None:
+		[sentences.extend(open_text(txt)) for txt in txts]		# Flatten
+	else:
+		sentences.append("あいうえおかきくけこ")
+		sentences.append("あいうえおかきくけこあいうえおかきくけこあいうえおかきくけこ")
+		sentences.append("すもももももももものうち")
+		sentences.append("赤巻紙青巻紙黄巻紙")
+		sentences.append("カエルぴょこぴょこ三ぴょこぴょこ合わせてぴょこぴょこ六ぴょこぴょこ")
+		sentences.append("志布志市志布志町志布志志布志市役所志布志支所")
+		sentences.append("すもももももももものののののののののうち")
+	# print("raw_sentences", sentences, "\n")
+
+	sentences = [m.parse(x).split() for x in sentences]
+	return sentences
 
 
-def set_default_sentences():
-	raw_sentences.append("あいうえおかきくけこ")
-	raw_sentences.append("あいうえおかきくけこあいうえおかきくけこあいうえおかきくけこ")
-	raw_sentences.append("すもももももももものうち")
-	raw_sentences.append("赤巻紙青巻紙黄巻紙")
-	raw_sentences.append("カエルぴょこぴょこ三ぴょこぴょこ合わせてぴょこぴょこ六ぴょこぴょこ")
-	raw_sentences.append("志布志市志布志町志布志志布志市役所志布志支所")
-	raw_sentences.append("すもももももももものののののののののうち")
-	# raw_sentences.append("朕惟フニ我カ皇祖皇宗國ヲ肇ムルコト宏遠ニ德ヲ樹ツルコト深厚ナリ\
-	# 我カ臣民克ク忠ニ克ク孝ニ億兆心ヲ一ニシテ世世厥ノ美ヲ濟セルハ此レ我カ國體ノ精華ニシテ教育ノ淵源亦實ニ此ニ存ス\
-	# 爾臣民父母ニ孝ニ兄弟ニ友ニ夫婦相和シ朋友相信シ恭儉己レヲ持シ博愛衆ニ及ホシ學ヲ\
-	# 修メ業ヲ習ヒ以テ智能ヲ啓發シ德器ヲ成就シ進テ公益ヲ廣メ世務ヲ開キ常ニ國憲ヲ重シ國法ニ遵ヒ一旦緩急アレハ義勇公ニ奉シ以テ天壤無\
-	# 窮ノ皇運ヲ扶翼スヘシ是ノ如キハ獨リ朕カ忠良ノ臣民タルノミナラス又以テ爾祖先ノ遺風ヲ顯彰スルニ足ラン\
-	# 斯ノ道ハ實ニ我カ皇祖皇宗ノ遺訓ニシテ子孫臣民ノ倶ニ遵守スヘキ所\
-	# 之ヲ古今ニ通シテ謬ラス之ヲ中外ニ施シテ悖ラス朕爾臣民ト倶ニ拳々服膺シテ咸其德ヲ一ニセンコトヲ庶幾フ")
-
-	# raw_sentences.append("")
-
-
-def text2list(text):		# MeCabにより文章を単語に分割
-	tmp = m.parse(text)
-	# tmp = m.parseNBest(text)
-	return tmp.split()
-
-
-def open_text(txt_name):	# "\n\n"でsentenceを区切る
-	raw_sentence = []
+def open_text(txt_name):
+	'''
+	"\n\n"の区切りごとに txt_name 内の文章をリストに入れる．
+	'''
+	sentences = []
 	with open(txt_name, "r", encoding="UTF-8") as f:
-		data1 = f.read()
-		data2 = data1.split("\n\n")
-		raw_sentence = [d.replace("\n", "").replace("\ufeff", "") for d in data2]
-		# print(raw_sentence)
-	return raw_sentence
+		sentences = f.read().split("\n\n")
+		sentences = [s.replace("\n", "").replace("\ufeff", "") for s in sentences]
+		# print(sentences)
+	return sentences
 
 
-def gen_n_markov_chain(text, n):
+def gen_n_markov_chain(sent, n):
+	'''
+	sent より n 階マルコフ連鎖を生成する．
+	'''
 	if n <= 0:
 		print("Error, n <= 0: n =", n,)
 		return
-	elif n > len(text):
+	elif n > len(sent):
 		print("Error, too much: n =", n,)
 		return
-	# graph.set_init_terms(("0Start",) + tuple(text[: n - 1]))
-	graph.set_edge(("0Start",) + tuple(text[0: n - 1]), tuple(text[0: n]), 1, text[n - 1])		# 開始地点: 0Start
-	graph.set_node(("0Start",) + tuple(text[0: n - 1]))		# db_r[初期ノード]作成のため
-	[graph.set_edge(tuple(text[i: i + n])
-					, tuple(text[i + 1: i + n + 1])
+	# graph.set_init_terms(("0Start",) + tuple(sent[: n - 1]))
+	graph.set_edge(("0Start",) + tuple(sent[0: n - 1]), tuple(sent[0: n]), 1, sent[n - 1])		# 開始地点: 0Start
+	[graph.set_edge(tuple(sent[i: i + n])
+					, tuple(sent[i + 1: i + n + 1])
 					, 1
-					, text[i + n]) for i in range(len(text) - n)]		#n階マルコフ連鎖
+					, sent[i + n]) for i in range(len(sent) - n)]		#n階マルコフ連鎖
 	if n == 1:		# 終了地点: End1
-		graph.set_edge((text[-1],), ("End1",), 1, "End1")
-		graph.set_node(("End1",))		# db[最終ノード]作成のため
+		graph.set_edge((sent[-1],), ("End1",), 1, "End1")
 	else:
-		graph.set_edge(tuple(text[-n:]), tuple(text[1 - n:] + ["End1"]), 1, "End1")
-		graph.set_node(tuple(text[1 - n:] + ["End1"]))
+		graph.set_edge(tuple(sent[-n:]), tuple(sent[1 - n:] + ["End1"]), 1, "End1")
 
 
 def chain_contraction_serial(n):		# 深さ方向に関する単一な連鎖の縮約（自己破壊的に）
@@ -190,18 +186,16 @@ def chain_contraction_parallel_(term1, term2, n):
 	# print("graph.chain_weights:", graph.chain_weights, "\n")
 
 
-def gen_graphviz(filename):
+def gen_graphviz(name):
 	global make_num
 	print("wait...")
-	makegv(graph.chain_weights, graph.chain_labels, terms, N
-			, filename + str(make_num) + "_N" + str(N), "dot")
-	print(filename + str(make_num) + ".gv was generated." )
+	filename = "".join([name, str(make_num), "_N", str(N)])
+	makegv(graph.chain_weights, graph.chain_labels, terms, N, filename, "dot")
+	print(filename + ".gv was generated.")
 	make_num += 1
 
 
-def gen_random_sentense1():
-	# unbiased_init_terms = list(set(graph.init_terms))
-	unbiased_init_terms = [x for x in graph.db if x[0] == "0Start"]
+def gen_random_sentense1(unbiased_init_terms):
 	w = unbiased_init_terms[random.randint(0, len(unbiased_init_terms) - 1)]
 	[print(x, end="") for x in w[1:]]
 	while 1:
@@ -221,47 +215,41 @@ def gen_random_sentense1():
 
 
 def gen_random_sentense(n):
-	print("ランダム文章生成")
-	[gen_random_sentense1() for x in range(n)]
+	print("ランダム文章生成:\n")
+	# unbiased_init_terms = list(set(graph.init_terms))
+	unbiased_init_terms = [x for x in graph.db if x[0] == "0Start"]
+
+	[gen_random_sentense1(unbiased_init_terms) for x in range(n)]
 
 
 if __name__ == "__main__":
 	N = 1
-	txts = []
+	txts = None
+
 	if argc == 1:
-		set_default_sentences()
+		pass
 	elif argc == 2:
 		N = int(argvs[1])
-		set_default_sentences()
 	elif argc > 2:
 		N = int(argvs[1])
 		txts = argvs[2:]
-		for txt in txts:
-			raw_sentences.extend(open_text(txt))		# Flatten
-	# print("raw_sentences", raw_sentences, "\n")
 
-	sentences = []
-	simplified_sentences = []
+	sentences = set_sentences(txts)
+
 	terms = []
-	[sentences.append(text2list(x)) for x in raw_sentences]
-
-	simplified_sentences = [list(set(s)) for s in sentences]
-
-	tmp = []
-	[tmp.extend(sentence) for sentence in simplified_sentences]		# Flatten
-	terms = list(set(tmp))
+	tmp = [list(set(s)) for s in sentences]
+	[terms.extend(s) for s in tmp]		# Flatten
+	terms = list(set(terms))
 	# print("terms :", terms, "\n")
 
-	[gen_n_markov_chain(text, N) for text in sentences]		# n階マルコフ連鎖
+	[gen_n_markov_chain(s, N) for s in sentences]		# n階マルコフ連鎖
 	# graph.print_elem()
-
-
 
 	###########################################################
 	########################  Outputs #########################
 	###########################################################
 	print("chain_num: ", sum(graph.chain_weights.values()), "\n")
-	gen_graphviz("output")
+	gen_graphviz("output")		# ファイル出力
 
 	chain_contraction_serial(N)		# 連鎖の縮約
 	print("chain_num: ", sum(graph.chain_weights.values()), "\n")
@@ -271,6 +259,4 @@ if __name__ == "__main__":
 	print("chain_num: ", sum(graph.chain_weights.values()), "\n")
 	gen_graphviz("output")		# ファイル出力
 
-	gen_random_sentense(10)
-
-	# N階マルコフ連鎖に対するグラフの縮約を実装した
+	gen_random_sentense(10)		# ランダムな文章を生成
