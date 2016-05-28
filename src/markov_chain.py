@@ -190,7 +190,7 @@ def gen_graphviz(name):
 	global make_num
 	print("wait...")
 	filename = "".join([name, str(make_num), "_N", str(N)])
-	makegv(graph.chain_weights, graph.chain_labels, terms, N, filename, "dot")
+	makegv(graph.chain_weights, graph.chain_labels, filename, "dot")
 	print(filename + ".gv was generated.")
 	make_num += 1
 
@@ -235,13 +235,6 @@ if __name__ == "__main__":
 		txts = argvs[2:]
 
 	sentences = set_sentences(txts)
-
-	terms = []
-	tmp = [list(set(s)) for s in sentences]
-	[terms.extend(s) for s in tmp]		# Flatten
-	terms = list(set(terms))
-	# print("terms :", terms, "\n")
-
 	[gen_n_markov_chain(s, N) for s in sentences]		# n階マルコフ連鎖
 	# graph.print_elem()
 

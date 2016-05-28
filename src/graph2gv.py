@@ -64,7 +64,7 @@ def gen_end_edges(G, str2, c_weight):
 		G.edge(str2, "End1", label=str(c_weight), style='dashed')
 
 
-def makegv(chain_weights, chain_labels, terms, n, filename, engine):
+def makegv(chain_weights, chain_labels, filename, engine):
 	exists_in_start.clear()
 	exists_in_end.clear()
 	G = Digraph(name="G", filename=filename + ".gv", format="pdf", engine=engine, encoding="utf-8")
@@ -89,7 +89,6 @@ def makegv(chain_weights, chain_labels, terms, n, filename, engine):
 
 	G.node("0Start", label="Start", shape="box", fontname="bold")
 	G.node("End1", label="End", shape="doublecircle", fontname="bold")
-	# [gen_nodes(G, term, True) for term in terms]		# あってもなくてもよい．ないほうがメモリを消費しない？
 
 	[gen_n_edges(G, chain, chain_weights[chain], chain_labels[chain]) for chain in chain_weights]
 	[gen_start_edges(G, str1, exists_in_start[str1]) for str1 in exists_in_start]
