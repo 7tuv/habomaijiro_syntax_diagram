@@ -20,13 +20,19 @@ class graph:
 	def set_init_terms(self, term):
 		self.init_terms.append(tuple(term))
 
-	def set_node(self, term):		# 新しい頂点を加える
+	def set_node(self, term):
+		'''
+		新しいノードを加える．
+		'''
 		if term not in self.db:
 			self.db[term] = []
 		if term not in self.db_r:
 			self.db_r[term] = []
 
-	def set_edge(self, source, target, weight, label=""):		# 新しい矢印を加える
+	def set_edge(self, source, target, weight, label=""):
+		'''
+		新しいエッジを加える．
+		'''
 		self.set_node(source)
 		self.set_node(target)
 
@@ -47,7 +53,10 @@ class graph:
 		else:
 			self.chain_labels[(source, target)] = label
 
-	def remove_node(self, term):		# 頂点を削除する
+	def remove_node(self, term):
+		'''
+		ノードをを削除する．
+		'''
 		n_terms = self.db[term]
 		p_terms = self.db_r[term]
 		for n_term in n_terms:
@@ -62,14 +71,20 @@ class graph:
 		del self.db_r[term]
 		# self.print_elem()
 
-	def remove_edge(self, term, n_term):		# 矢印を削除する
+	def remove_edge(self, term, n_term):
+		'''
+		エッジを削除する．
+		'''
 		self.db[term].remove(n_term)
 		self.db_r[n_term].remove(term)
 		del self.chain_weights[(term, n_term)]
 		del self.chain_labels[(term, n_term)]
 		# self.print_elem()
 
-	def change_node(self, term, new_term):		# 頂点の term を new_term に変更する
+	def change_node(self, term, new_term):
+		'''
+		ノード term を new_term に変更する．
+		'''
 		n_terms = self.db[term]
 		p_terms = self.db_r[term]
 		# print(term)
@@ -82,6 +97,9 @@ class graph:
 		# self.print_elem()
 
 	def is_linear_node(self, term, n):
+		'''
+		ノード term より n 個遷移先の全てのノードから，分岐なしにノード term まで遡れるとき True を返す．
+		'''
 		if n == 0:		# 深さ 0 の時は無条件で True
 			return True
 		elif term not in self.db:
@@ -93,40 +111,53 @@ class graph:
 		else:
 			return value and all([self.is_linear_node(n_term, n - 1) for n_term in n_terms])
 
-	def get_tree(self, term, n):		# ある頂点 term から深さ n までの遷移先の頂点を(深く)取得する
-		if term not in self.db:			# structure ::= [term, [structure(==n_term)]]
-			return []
+	def get_tree(self, term, n):
+		'''
+		ノード term から深さ n までの遷移先の木を取得する．
+		structure ::= [term, [structure(==n_term)]]
+		'''
 		n_terms = self.db[term]
 		if n <= 1:
 			return n_terms[:]		# 深いコピー
 		else:
 			return [[n_term, (self.get_tree(n_term, n - 1))] for n_term in n_terms]
 
-	def change_tree(self, tree, new_term, n):		# 末端の node から変更することで，整合性を保つ
-		if not isinstance(tree, list):				# また上5行目の深いコピーは，この整合性を保つために必要な条件である
-			# print("in change_tree", tree, new_term[n:] + tree[-n:])
-			# print(tree)
-			self.change_node(tree, new_term[n:] + tree[-n:])
+	def get_tree_terminal(self, term, n):
+		'''
+		ノード term から深さ n の遷移先の末端ノードを取得する．
+		structure ::= [term, [structure(==n_term)]]
+		'''
+		n_terms = self.db[term]
+		if n <= 1:
+			return n_terms[:]		# 深いコピー
 		else:
-			# print(tree)
+			tmp = []
+			tmp.extend([self.get_tree_terminal(n_term, n - 1) for n_term in n_terms])
+			result = []
+			[result.extend(x) for x in tmp]
+			return result
+
+	def change_tree(self, tree, new_term, n):
+		'''
+		木 tree の ノードに含まれる特定の単語を，全て new_term に置き換える．
+		特定の単語とは tree のルートノードの右から n + 1 番目である．
+		'''
+		if not isinstance(tree, list):
+			# print("in change_tree", tree, new_term[n:] + tree[-n:])
+			self.change_node(tree, new_term[n:] + tree[-n:])
+		else:		# 末端の node から変更することで，グラフの整合性を保つ
 			[self.change_tree(n_tree, new_term, n + 1) for n_tree in tree[1]]
 			term = tree[0]
 			self.change_node(term, new_term[n:] + term[-n:])
-
-	# def change_tree(self, tree, new_term, n):		# 末端の node から変更することで，整合性を保つ
-	# 	if not isinstance(tree, list):				# また上5行目の深いコピーは，この整合性を保つために必要な条件である
-	# 		# print("in change_tree", tree, new_term[n:] + tree[-n:])
-	# 		self.change_node(tree, new_term[n:] + tree[-n:])
-	# 	else:
-	# 		[self.change_tree(n_tree, new_term, n + 1) for n_tree in tree[1]]
-	# 		term = tree[0]
-	# 		self.change_node(term, new_term[n:] + term[-n:])
 
 	# def change_nodes(self, term, new_term, n):
 	# 	if n <= 0 or term not in graph.db:
 	# 		self.change_node(term, new_term)
 
 	def remove_tree(self, tree, n):
+		'''
+		木 tree に含まれるノードを削除する．
+		'''
 		if not isinstance(tree, list):
 			# print("rm:", tree)
 			self.remove_node(tree)

@@ -47,7 +47,7 @@ def open_text(txt_name):
 
 def gen_n_markov_chain(sent, n, graph):
 	'''
-	sent より n 階マルコフ連鎖を生成する．
+	分かち書きされた文章 sent から n 階マルコフ連鎖を生成する．
 	'''
 	if n <= 0:
 		print("Error, n <= 0: n =", n,)
@@ -67,7 +67,10 @@ def gen_n_markov_chain(sent, n, graph):
 		graph.set_edge(tuple(sent[-n:]), tuple(sent[1 - n:] + ["End1"]), 1, "End1")
 
 
-def chain_contraction_serial(n, graph):		# 深さ方向に関する単一な連鎖の縮約（自己破壊的に）
+def chain_contraction_serial(n, graph):
+	'''
+	# n 階マルコフ連鎖モデルの graph に対する直列方向の縮約を行う．
+	'''
 	is_contracted = True
 	while is_contracted is True:
 		is_contracted = False
@@ -79,12 +82,15 @@ def chain_contraction_serial(n, graph):		# 深さ方向に関する単一な連�
 				# print(term2)
 				if term2[-1] != "End1" and len(graph.db_r[term2]) == 1:
 					if graph.is_linear_node(term2, n - 1):
-						chain_contraction_serial_(term1, term2, n, graph)
+						combine_serial_nodes(term1, term2, n, graph)
 						is_contracted = True
 						# break
 
 
-def chain_contraction_serial_(term1, term2, n, graph):
+def combine_serial_nodes(term1, term2, n, graph):
+	'''
+	直列したノード(term1, term2)を結合する．
+	'''
 	new_t1 = term1[-1]
 	new_t2 = term2[-1]
 	if isinstance(new_t1, tuple):
@@ -109,27 +115,44 @@ def chain_contraction_serial_(term1, term2, n, graph):
 	# print("graph.chain_weights:", graph.chain_weights, "\n")
 
 
-def chain_contraction_parallel(n, graph):		# 幅方向に関する平行した連鎖の縮約（自己破壊的に）
+def chain_contraction_parallel(n, graph):
+	'''
+	# n 階マルコフ連鎖モデルの graph に対する並列方向の縮約を行う．
+	'''
 	is_contracted = True
 	while is_contracted is True:
-		is_contracted = False
+		is_contracted = False		# graph 内のノード同士で結合が行われたか
 		iter_db = list(graph.db)
 		for term in iter_db:		# for の中で一度も縮約が行われなかったら while から出る
 			if term in graph.db and len(graph.db[term]) > 1:
 				n_terms = graph.db[term]
-				# print(n_terms)
-				is_contracted2 = False
+				is_contracted2 = False		# n_terms　内のノード同士で結合が行われたか
 				for i in range(len(n_terms) - 1):
-					if len(graph.db[n_terms[i]]) == 0 or graph.is_linear_node(n_terms[i], n - 1) == False:
-						continue		# End が含まれている or rootが一つでない
-					meet_nodes_i = get_n_depth_node([n_terms[i]], n, graph)
+					if graph.is_linear_node(n_terms[i], n - 1) == False:
+						continue		# End が含まれている or 戻り先が一つでない
 					for j in range(i + 1, len(n_terms)):
-						if len(graph.db[n_terms[j]]) == 0 or graph.is_linear_node(n_terms[j], n - 1) == False:
-							continue		# End が含まれている or rootが一つでない
-						meet_nodes_j = get_n_depth_node([n_terms[j]], n, graph)
-						if set(meet_nodes_i) == set(meet_nodes_j):
-							chain_contraction_parallel_(n_terms[i], n_terms[j], n, graph)
-							print("gets to", set(meet_nodes_i))
+						if graph.is_linear_node(n_terms[j], n - 1) == False:
+							continue		# End が含まれている or 戻り先が一つでない
+
+						term1 = n_terms[i]
+						term2 = n_terms[j]
+						p_n_terms_i = graph.db_r[term1]
+						p_n_terms_j = graph.db_r[term2]
+						terminal_terms_i = graph.get_tree_terminal(term1, n)
+						terminal_terms_j = graph.get_tree_terminal(term2, n)
+						# #
+						# print(term, "to", term1, term2)
+						# print(term1, "'s root:", p_n_terms_i)
+						# print(term2, "'s root:", p_n_terms_j)
+						# print("terminal nodes of i:", terminal_terms_i)
+						# print("terminal nodes of j:", terminal_terms_j)
+						# #
+						if set(p_n_terms_i) == set(p_n_terms_j) \
+							and (len(set(terminal_terms_i)) > 0 or term1[-1] == term2[-1]) \
+							and set(terminal_terms_i) == set(terminal_terms_j) \
+							and graph.is_linear_node(term1, n - 1) \
+							and graph.is_linear_node(term2, n - 1):
+							combine_parallel_nodes(term1, term2, n, graph)
 							is_contracted = True
 							is_contracted2 = True
 							break
@@ -137,45 +160,27 @@ def chain_contraction_parallel(n, graph):		# 幅方向に関する平行した�
 						break
 
 
-def get_n_depth_node(nodes, n, graph):
-	result = []
-	[result.extend(graph.db[node]) for node in nodes]
-	if n <= 1:
-		return result
-	else:
-		return get_n_depth_node(result, n - 1, graph)
-
-
-def chain_contraction_parallel_(term1, term2, n, graph):
+def combine_parallel_nodes(term1, term2, n, graph):
+	'''
+	並列したノード(term1, term2)を結合する．
+	'''
 	new_t1 = term1[-1]
 	new_t2 = term2[-1]
 	if isinstance(new_t1, str):
 		new_t1 = (new_t1,)
 	if isinstance(new_t2, str):
 		new_t2 = (new_t2,)
-	new_term = term1[:-1] + (new_t1 + new_t2,)
-	print(term1, term2, "->", new_term)
+	new_term = term1[:-1] + (tuple(sorted(new_t1 + new_t2,)),)
+	# print(term1, term2, "->", new_term)
 
+	if n > 1:
+		tree1 = graph.get_tree(term1, n - 1)
+		[graph.change_tree(n_tree, new_term, 1) for n_tree in tree1]
+		tree2 = graph.get_tree(term2, n - 1)
+		[graph.change_tree(n_tree, new_term, 1) for n_tree in tree2]
+
+	graph.change_node(term2, term1)
 	graph.change_node(term1, new_term)
-	n_terms = graph.db[new_term]
-	if n > 1:
-		trees1 = graph.get_tree(new_term, n - 1)
-		# print(trees1)
-		[graph.change_tree(n_tree, new_term, 1) for n_tree in trees1]
-		# graph.change_tree(tree, new_term, 1)
-
-	if n > 1:
-		trees2 = graph.get_tree(term2, n - 1)
-		# print(trees2)
-		[graph.remove_tree(n_tree, n - 2) for n_tree in trees2]
-	graph.remove_node(term2)
-
-	# if n > 1:
-	# 	tree = graph.get_tree(term2, n - 1)
-	# 	# print(tree)
-	# 	[graph.change_tree(n_tree, new_term, 1) for n_tree in tree]
-	# 	# graph.change_tree(tree, new_term, 1)
-	# graph.remove_node(term2)
 
 	# print("graph.db:", graph.db, "\n")
 	# print("graph.db_r:", graph.db_r, "\n")
@@ -183,9 +188,14 @@ def chain_contraction_parallel_(term1, term2, n, graph):
 
 
 def gen_graphviz(name, graph):
+	'''
+	graphviz を用いて graph を name.pdf（画像）, name.gv（dot言語ファイル） として出力する
+	'''
+	print("node: ", len(graph.db.values()))
+	print("edge: ", sum(graph.chain_weights.values()))
 	print("wait...")
 	makegv(graph.chain_weights, graph.chain_labels, name, "dot")
-	print(name + ".gv was generated.")
+	print(name + ".gv was generated.\n")
 
 
 def gen_random_sentense1(unbiased_init_terms, graph):
@@ -235,15 +245,18 @@ if __name__ == "__main__":
 	###########################################################
 	########################  Outputs #########################
 	###########################################################
-	print("chain_num: ", sum(graph.chain_weights.values()), "\n")
 	gen_graphviz("output0_N" + str(N), graph)		# ファイル出力
 
-	chain_contraction_serial(N, graph)		# 連鎖の縮約
-	print("chain_num: ", sum(graph.chain_weights.values()), "\n")
+	chain_contraction_serial(N, graph)		# 直列方向の縮約
 	gen_graphviz("output1_N" + str(N), graph)		# ファイル出力
 
-	chain_contraction_parallel(N, graph)		# 連鎖の縮約
-	print("chain_num: ", sum(graph.chain_weights.values()), "\n")
+	chain_contraction_parallel(N, graph)		# 並列方向の縮約
 	gen_graphviz("output2_N" + str(N), graph)		# ファイル出力
+
+	chain_contraction_serial(N, graph)		# 直列方向の縮約
+	gen_graphviz("output3_N" + str(N), graph)		# ファイル出力
+
+	chain_contraction_parallel(N, graph)		# 並列方向の縮約
+	gen_graphviz("output4_N" + str(N), graph)		# ファイル出力
 
 	gen_random_sentense(10, graph)		# ランダムな文章を生成

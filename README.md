@@ -19,6 +19,7 @@ habomaijiro_syntax_diagram
 * Graphvizを用いた構文図の作成
 * 構文図の縮約を実行し，縮約後の構文図の作成
 	- 縮約は直列方向と並列方向の2種類
+		- 並列方向の縮約はまだ不完全
 * N階マルコフ連鎖に基づく文章のランダムな生成
 
 ## Requirements
@@ -66,7 +67,7 @@ habomaijiro_syntax_diagram
 
 ![画像(outputs1_N1.pdfより)](sample/output1_N1.PNG)
 
-詳しくは`sample/`内の`output<m>_N<n>.pdf`を見てください．`<n>`はマルコフ連鎖の階数です．`<m>`は，`<m>=0`のとき縮約をしていない図，`<m>=1`のとき直列方向の縮約をした図，`<m>=2`のとき直列と並列方向の縮約をした図となっています．
+詳しくは`sample/`内の`output<m>_N<n>.pdf`を見てください．`<m>`は，`<m>=0`のとき縮約をしていない図，`<m>=1`のとき直列方向の縮約をした図，`<m>=2`のとき直列と並列方向の縮約をした図となっています．`<n>`はマルコフ連鎖の階数です．
 
 `markov_chain.py`内では，`gen_graphviz(<ファイル名>)`関数によってグラフの出力を，`chain_contraction_serial(<階数>)`と`chain_contraction_parallel(<階数>)`関数によってそれぞれ直列方向と並列方向のグラフの縮約を行っています．
 
