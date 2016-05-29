@@ -28,6 +28,8 @@ habomaijiro_syntax_diagram
 * MeCab
 * Python3
 * Python packages from PyPI
+	- requests
+	- requests_oauthlib
 	- graphviz
 	- mecab-python3
 
