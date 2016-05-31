@@ -35,12 +35,10 @@ def elim_url(text):
 		return text.strip(result.group(0))
 
 
-def get_tweets(lim_tweets, count):
-	if 0 < lim_tweets and lim_tweets < 200:
-		params["count"] = str(lim_tweets)
+def get_tweets(tweets_count, i):
 	url_var = "&".join([x + "=" + params[x] for x in params] + [max_id[-1]])
 	r = twitter.get(url + "?" + url_var)
-	if "errors" in r or lim_tweets <= 0:
+	if "errors" in r:
 		return []
 	elif r.status_code != 200 :
 		print("Response", r.status_code)
@@ -48,15 +46,17 @@ def get_tweets(lim_tweets, count):
 	# print(r.content)
 	# print("type:", type(r))
 	timeline = json.loads(r.text)
-	with open("tweets_" + str(count) + ".json", "w", encoding='utf-8') as f:
+	with open("tweets_" + str(i) + ".json", "w", encoding='utf-8') as f:
 		json.dump(r.text, f)
 
-	if len(timeline) >= 1:
+	if len(timeline) == 0:
+		return []
+	elif 0 < len(timeline) and len(timeline) < tweets_count:
 		max_id.append("max_id=" + str(timeline[-1]["id"] - 1))
 		print(max_id)
-		return timeline + (get_tweets(lim_tweets - len(timeline), count + 1))
+		return timeline + (get_tweets(tweets_count - len(timeline), i + 1))
 	else:
-		return timeline
+		return timeline[:tweets_count]
 
 
 if __name__ == "__main__":
@@ -66,9 +66,9 @@ if __name__ == "__main__":
 		params["screen_name"] = argvs[1]
 	elif argc > 2:
 		params["screen_name"] = argvs[1]
-		tweet_num = int(argvs[2])
+		tweets_count = int(argvs[2])
 
-	timeline = get_tweets(tweet_num, 0)
+	timeline = get_tweets(tweets_count, 0)
 	tweet_text = []
 	[tweet_text.append(tweet["text"]) for tweet in timeline]
 
